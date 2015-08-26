@@ -4,8 +4,8 @@
 
 /*拉格朗日内插*/
 
-#define LARGE_INTERP_OS_SIG_LEN 110200     /*输入信号长度最大值*/
-#define LARGE_INTERP_NEW_IDX_LEN 58000    /*内插系数长度最大值*/
+#define LARGE_INTERP_OS_SIG_LEN 1102000     /*输入信号长度最大值*/
+#define LARGE_INTERP_NEW_IDX_LEN 580000    /*内插系数长度最大值*/
 
 typedef struct tag_Air_mid_la
 {
