@@ -56,6 +56,7 @@ int Large_interp1(double d_os_sig_real[], double d_os_sig_imag[], int os_sig_len
 //	}
 
 	////////////////// added by GAO 20150802
+	//Bug
 	i_resample_len = floor(os_sig_len*p_Air_mid_la_para->interp_factor);
 	if (tx_rx_flag) d_factor = 1/p_Air_mid_la_para->interp_factor;
 	else d_factor = p_Air_mid_la_para->interp_factor;

@@ -1,8 +1,9 @@
 from ctypes import *	
 import time
 import numpy as np
+#import matplotlib.pyplot as plt
 
-resample_lib = CDLL("resample.so")
+resample_lib = CDLL("./resample.so")
 
 class PSTR_Lagrange_para(Structure):
 	_fields_ = [('interp_factor', c_double),
@@ -13,7 +14,7 @@ class PSTR_Lagrange_para(Structure):
 def Largrane_para_gen( fracst, in_sr, out_sr ):
 	
 	Largrange_para = PSTR_Lagrange_para()
-	Largrange_para.interp_factor = in_sr/out_sr
+	Largrange_para.interp_factor = out_sr/in_sr
 	Largrange_para.fracst = c_double( fracst )
 	Largrange_para.timeo = c_double(0)
 	return Largrange_para
@@ -21,9 +22,10 @@ def Largrane_para_gen( fracst, in_sr, out_sr ):
 def large( int_sig_real, int_sig_imag, sig_len1 ):
 	
 	larg_start = time.time()
-	
-	la_real = (c_double*len(deci_real[:]))()
-	la_imag = (c_double*len(deci_real[:]))()
+	size_out = int(sig_len1*25./30.72+1.)
+	print size_out
+	la_real = (c_double*size_out)()
+	la_imag = (c_double*size_out)()
 	la_out_len = (c_uint*1)()
 	fracst = (c_double*1)()
 	Largrange_para = Largrane_para_gen( 0., 30.72, 25. )
@@ -40,9 +42,11 @@ def large( int_sig_real, int_sig_imag, sig_len1 ):
 		)
 	
 
-	
+	 	
 	larg_end = time.time()
 	print 'la_time', larg_end - larg_start
+	#plt.plot(la_real)
+	#plt.plot(la_imag)
 
 	return la_out_len[0],larg_end - larg_start
 
@@ -54,4 +58,4 @@ length,es = large(
 	  r.ctypes.data_as(POINTER(c_double))
 	, i.ctypes.data_as(POINTER(c_double))
 	, 1200 )
-	 
+
