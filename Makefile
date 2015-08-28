@@ -9,7 +9,8 @@ OBJS = fft1024.o \
 	phy_idct_dct.o \
 	phy_idft.o \
 	phy_ifft.o \
-	mfft.o
+	mfft.o \
+	twiddle8192.o
 
 %.o : %.cpp
 	gcc $(CFLAGS) -c -o $@ $<

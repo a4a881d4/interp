@@ -607,7 +607,7 @@ extern "C" void fft2048(__m128i *InBuf, __m128i *OutBuf, __m128i *r32twiddle, __
 {
     WORD32 i_loop=0;
     WORD32 in_span, out_span;
-    printf("%s(a4a881d4): in:0x%llx out:0x%llx\n",__FILE__,(long long int)InBuf, (long long int)OutBuf );
+    //printf("%s(a4a881d4): in:0x%llx out:0x%llx\n",__FILE__,(long long int)InBuf, (long long int)OutBuf );
     
     __m128i m128_t0,m128_t1,m128_t2,m128_t3,m128_t4,m128_t5,m128_t6,m128_t7,m128_t8,m128_t9,m128_t10,m128_t11,m128_t12;
     __m128i OutTmp[512];
