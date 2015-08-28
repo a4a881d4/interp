@@ -1,4 +1,4 @@
-CFLAGS = -O3 -msse4 -march=core2  -fPIC
+CFLAGS = -O2 -msse4 -march=core2  -fPIC
 OBJS = fft1024.o \
 	ifft1024.o \
 	init_fft.o \
@@ -10,7 +10,9 @@ OBJS = fft1024.o \
 	phy_idft.o \
 	phy_ifft.o \
 	mfft.o \
-	twiddle8192.o
+	twiddle8192.o \
+	mulfunc.o \
+	al_fdcorr.o
 
 %.o : %.cpp
 	gcc $(CFLAGS) -c -o $@ $<

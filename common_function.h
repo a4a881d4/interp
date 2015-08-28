@@ -89,5 +89,12 @@ void init_idct_dct_table(WORD16 *psIdctDctTable, WORD16 idctDctSize);
 void gen_dct(__m128i *InBuf,__m128i *OutBuf,WORD32 dctSize);
 void gen_idct(__m128i *InBuf,__m128i *OutBuf,WORD32 dctSize);
 
+extern "C" void findCmax2048( void *in, int *iMax, int *avg );
+extern "C" void mul( void *ina, void *inb, void *out, int len );
+extern "C" void mulconj( void *ina, void *inb, void *out, int len );
+extern "C" void fft8192( void *in, void *out );
+extern "C" void fft2048_n( void *in, void *out );
+extern "C" void ifft2048( void *in, void *out );
+
 #endif
 

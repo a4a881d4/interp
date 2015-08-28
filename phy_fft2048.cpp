@@ -32,7 +32,7 @@ void init_fft2048_twiddle_factor(WORD16 * r2048twiddle, WORD16 * r32twiddle, WOR
 {
     WORD32 i, j;
     DOUBLE64 factor = 32768;
-    printf("%s(a4a881d4): FFT 2048 twiddle factor initial\n",__FILE__);
+    //printf("%s(a4a881d4): FFT 2048 twiddle factor initial\n",__FILE__);
     
     // r2048twiddle
     for (i=0; i<32; i++)

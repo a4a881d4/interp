@@ -143,12 +143,7 @@ extern "C" void fft8192( void *in, void *out )
 	fft2048_n( pin+0, pout+0 );
 	fft2048_n( pin+2048/4, pout+2048/4 );
 	fft2048_n( pin+2*2048/4, pout+2*2048/4 );
-	fft2048_n( pin+3*2048/4, pout+2*2048/4 );
-/*
-	fft2048_n( pout+0, pout+0 );
-	fft2048_n( pout+2048/4, pout+2048/4 );
-	fft2048_n( pout+2*2048/4, pout+2*2048/4 );
-	fft2048_n( pout+3*2048/4, pout+2*2048/4 );
-*/
+	fft2048_n( pin+3*2048/4, pout+3*2048/4 );
+
 }
 	

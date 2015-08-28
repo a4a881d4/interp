@@ -24,7 +24,7 @@ void init_twiddle_factor(WORD16 * r2048twiddle, WORD16 * r32twiddle, WORD16* r64
 {
     WORD32 i, j;
     DOUBLE64 factor = 32768;
-    printf("%s(a4a881d4): FFT 2048 twiddle factor initial\n",__FILE__);
+    //printf("%s(a4a881d4): FFT 2048 twiddle factor initial\n",__FILE__);
     WORD32 sign = 1;
 
 	// r2048twiddle
@@ -855,7 +855,7 @@ void fft2048_core(__m128i *InBuf, __m128i *OutBuf,  __m128i *r32twiddle, __m128i
 {
     WORD32 i_loop=0;
     WORD32 in_span, out_span;
-    printf("%s(a4a881d4): in:0x%llx out:0x%llx\n",__FILE__,(long long int)InBuf, (long long int)OutBuf );
+    //printf("%s(a4a881d4): in:0x%llx out:0x%llx\n",__FILE__,(long long int)InBuf, (long long int)OutBuf );
       __m128i Temp64_32_Buf[64];
 	__m128i OutTmp[512];
 	__m128i m128_t0, m128_t1, m128_t2, m128_t3, m128_t4, m128_t5, m128_t6, m128_t7, \
