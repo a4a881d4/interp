@@ -111,15 +111,14 @@ extern "C" int processFreqCorr( void *in, void *out, int nco, int freq, int len 
 
 } 
 
-extern "C" void down2Sample( void *in, void *out, int len, int odd )
+extern "C" void down2Sample( void *in, void *out, int len, int off )
 {
 	int i;
 	int *iin,*iout;
 	iin = (int*)in;
 	iout = (int*)out;
 	i = len/2;
-	if(odd)
-		iin++;
+	iin += off;
 	while( i>0 )
 	{
 		*iout++ = *iin++; iin++; i--;	
@@ -170,7 +169,7 @@ extern "C" void xcorr2048Shift( void *ina, void *inb, int shift, int *out )
 	__m128i sumi, sumq;
 	int *ii,*iq;
 	int s0,s1,s2;
-	
+	shift &= 0x7ff;
 	s0 = shift&3;
 	s1 = shift>>2;
 	s2 = (2048/4-s1);
