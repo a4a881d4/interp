@@ -12,7 +12,8 @@ OBJS = fft1024.o \
 	mfft.o \
 	twiddle8192.o \
 	mulfunc.o \
-	al_fdcorr.o
+	al_fdcorr.o \
+	twiddle_2048_full.o
 
 %.o : %.cpp
 	gcc $(CFLAGS) -c -o $@ $<
