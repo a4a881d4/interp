@@ -220,4 +220,174 @@ extern "C" void xcorr2048Shift( void *ina, void *inb, int shift, int *out )
   	out[0] += ii[i];
   	out[1] += iq[i];	
   }
-}   
+}
+
+#define BUFSIZE (512*256)
+#define TABSIZELOG2 (5)
+typedef struct ft_corr {
+	int carrierf;
+	int timingf;
+	int carrierp;
+	int timingp;
+	int buf_end;
+} ft_corr_t;
+__m128i g_interpolationBuf[BUFSIZE/4];
+
+extern "C" int interpolationPutBuf( void *in, int il, ft_corr_t *state )
+{
+	int pos;
+	int *pb;
+	pos = state->timingp >> 16;
+	pb = (int*)g_interpolationBuf;
+	memmove( pb, pb+pos, (state->buf_end-pos)*sizeof(int) );
+	state->buf_end = state->buf_end-pos; 
+	state->timingp &= 0xffff;
+	memcpy( pb+state->buf_end, in, il*sizeof(int) );
+	state->buf_end += il;
+	return state->buf_end;
+}
+
+static void dump( __m128i a, const char name[] )
+{
+	short *pa;
+	int i;
+	pa = (short *)&a;
+	printf("%s:",name);
+	for( i=0;i<8;i++ )
+		printf("%6d ",(int)pa[i]);
+	printf("\n");
+}
+
+static void dumpint( __m128i a, const char name[] )
+{
+	int *pa;
+	int i;
+	pa = (int *)&a;
+	printf("%s:",name);
+	for( i=0;i<4;i++ )
+		printf("%10d ",(int)pa[i]);
+	printf("\n");
+}
+static void dumpTab( void *tab )
+{
+	__m128i t0;
+	__m128i *pt = (__m128i *)tab;
+	int i,j;
+	for( i=0;i<32;i++ )
+	{
+		for(j=0;j<6;j++ )
+		{
+			t0 = _mm_load_si128( pt ); pt+=1;
+			dump( t0, "" );
+		}
+		printf("\n");
+	} 	
+}
+extern "C" int interpolationFreqCorr( void *out, void *tab, int ol, int oo, ft_corr_t *state )
+// ol must div 4
+// oo must div 4
+// interpolation 6
+{
+	int pos;
+	int i,j;
+	int *pb;
+	int cp,tp,t;
+	__m128i *po,*pt;
+	__m128i m128_t0,m128_t1,m128_t2,m128_t3,m128_t4,m128_t5,m128_t6,m128_t7,m128_t8,m128_t9,m128_t10,m128_t11,m128_t12;
+	__m128i sumi, sumq;
+	int *twiddle = (int *)stwiddle_2048;
+	pt = (__m128i*)tab;
+	po = (__m128i*)out;
+	po += oo/4;
+	pos = state->timingp >> 16;
+	pb = (int*)g_interpolationBuf;
+	//dumpTab( tab );
+	for( i=0;i<ol/4;i++ )
+	{
+		cp = (state->carrierp>>16)&0x7ff;
+		tp = (state->timingp>>(16-TABSIZELOG2))&((1<<TABSIZELOG2)-1);
+		pos = state->timingp>>16;
+		sumi = _mm_xor_si128( sumi, sumi );
+		sumq = _mm_xor_si128( sumq, sumq );
+		{
+			m128_t0 = _mm_loadu_si128( (__m128i*)(pb+pos+0) );  // if(i==0) dump( m128_t0, "m128_t0");
+			m128_t1 = _mm_loadu_si128( (__m128i*)(pb+pos+1) );  // if(i==0) dump( m128_t1, "m128_t1");
+			                                                    //
+			m128_t2 = _mm_load_si128( pt+tp*6 );                // if(i==0) dump( m128_t2, "m128_t2");
+			m128_t3 = _mm_load_si128( pt+tp*6+1 );              // if(i==0) dump( m128_t3, "m128_t3");
+			                                                    //
+			m128_t0 = _mm_shuffle_epi8(m128_t0, IQ_switch);     // if(i==0) dump( m128_t0, "m128_t0");
+    	m128_t4 = _mm_blend_epi16( m128_t1, m128_t0, 0x55 );// if(i==0) dump( m128_t4, "image m128_t4");// image
+			m128_t5 = _mm_blend_epi16( m128_t0, m128_t1, 0x55 );// // real
+			m128_t5 = _mm_shuffle_epi8(m128_t5, IQ_switch);     // if(i==0) dump( m128_t5, "real m128_t5");
+    	                                                    //
+			m128_t6 = _mm_blend_epi16( m128_t3, m128_t2, 0x55 );// if(i==0) dump( m128_t6, "m128_t6");
+			                                                    //
+			m128_t7 = _mm_madd_epi16(  m128_t4, m128_t6 );      // if(i==0) dumpint( m128_t7, "m128_t7");
+			sumq = _mm_add_epi32( sumq, m128_t7 );              //
+			                                                    //
+			m128_t8 = _mm_madd_epi16(  m128_t5, m128_t6 );      // if(i==0) dumpint( m128_t8, "m128_t8");
+			sumi = _mm_add_epi32( sumi, m128_t8 );              //
+			                                                    //
+			m128_t0 = _mm_loadu_si128( (__m128i*)(pb+pos+2) );  // if(i==0) dump( m128_t0, "m128_t0");
+			m128_t1 = _mm_loadu_si128( (__m128i*)(pb+pos+3) );  // if(i==0) dump( m128_t1, "m128_t1");
+			                                                    //                                    
+			m128_t2 = _mm_load_si128( pt+tp*6+2 );              // if(i==0) dump( m128_t2, "m128_t2");
+			m128_t3 = _mm_load_si128( pt+tp*6+3 );              // if(i==0) dump( m128_t3, "m128_t3");
+			                                                    //
+			m128_t0 = _mm_shuffle_epi8(m128_t0, IQ_switch);     // if(i==0) dump( m128_t0, "m128_t0");
+    	m128_t4 = _mm_blend_epi16( m128_t1, m128_t0, 0x55 );// if(i==0) dump( m128_t4, "image m128_t4");// image
+			m128_t5 = _mm_blend_epi16( m128_t0, m128_t1, 0x55 );// // real
+			m128_t5 = _mm_shuffle_epi8(m128_t5, IQ_switch);     // if(i==0) dump( m128_t5, "real m128_t5");
+    	                                                    //
+			m128_t6 = _mm_blend_epi16( m128_t3, m128_t2, 0x55 );// if(i==0) dump( m128_t6, "m128_t6");
+			                                                    //
+			m128_t7 = _mm_madd_epi16(  m128_t4, m128_t6 );      //
+			sumq = _mm_add_epi32( sumq, m128_t7 );              //
+			                                                    //
+			m128_t8 = _mm_madd_epi16(  m128_t5, m128_t6 );      //
+			sumi = _mm_add_epi32( sumi, m128_t8 );              //
+                                                          //
+			m128_t0 = _mm_loadu_si128( (__m128i*)(pb+pos+4) );  // if(i==0) dump( m128_t0, "m128_t0");
+			m128_t1 = _mm_loadu_si128( (__m128i*)(pb+pos+5) );  // if(i==0) dump( m128_t1, "m128_t1");
+			                                                    //                                    
+			m128_t2 = _mm_load_si128( pt+tp*6+4 );              // if(i==0) dump( m128_t2, "m128_t2");
+			m128_t3 = _mm_load_si128( pt+tp*6+5 );              // if(i==0) dump( m128_t3, "m128_t3");
+			                                                    //
+			m128_t0 = _mm_shuffle_epi8(m128_t0, IQ_switch);     // if(i==0) dump( m128_t0, "m128_t0");
+    	m128_t4 = _mm_blend_epi16( m128_t1, m128_t0, 0x55 );// if(i==0) dump( m128_t4, "image m128_t4");// image
+			m128_t5 = _mm_blend_epi16( m128_t0, m128_t1, 0x55 );// // real
+			m128_t5 = _mm_shuffle_epi8(m128_t5, IQ_switch);     // if(i==0) dump( m128_t5, "real m128_t5");
+    	                                                    //
+			m128_t6 = _mm_blend_epi16( m128_t3, m128_t2, 0x55 );// if(i==0) dump( m128_t6, "m128_t6");
+			
+			m128_t7 = _mm_madd_epi16(  m128_t4, m128_t6 );
+			sumq = _mm_add_epi32( sumq, m128_t7 );
+			
+			m128_t8 = _mm_madd_epi16(  m128_t5, m128_t6 );
+			sumi = _mm_add_epi32( sumi, m128_t8 );
+
+	    sumi  = _mm_srli_si128 (sumi, 2); 
+    	m128_t0 = _mm_blend_epi16(sumq,sumi, 0x55);            //if(i<16) dump( m128_t0, "m128_t0");
+		}
+		t = twiddle[cp];
+		m128_t2 = _mm_set_epi32( t, t, t, t );
+		
+		m128_t1 = _mm_shuffle_epi8(m128_t0, IQ_switch);
+    m128_t3 = _mm_sign_epi16  (m128_t2, Neg_I);
+
+    m128_t8 = _mm_madd_epi16  (m128_t0, m128_t2); 
+    m128_t12  = _mm_madd_epi16(m128_t1, m128_t3);
+     
+    m128_t8  = _mm_srli_si128 (m128_t8, 2); 
+    m128_t12 = _mm_blend_epi16(m128_t12,m128_t8, 0x55);
+     
+    _mm_store_si128(po, m128_t12);  po = po + 1; 
+    state->carrierp += state->carrierf;	
+    state->timingp += state->timingf;	
+	}
+	pos = state->timingp >> 16;
+	return state->buf_end-pos;
+}
+	
+	   
