@@ -465,17 +465,53 @@ def FHT(data):
 
 */
 
-extern "C" void wash( short *in, short *out, int level, int off )
+extern "C" void walsh( short *in, int level, int off )
 {
 	short *pin = in + off*2;
-	short *pout = out + off*2;
 	int k1,k2,k3;
 	int i1,i2,i3;
 	int L1,i,j;
 	int ta,tb;
-	k1 = 2;
-	k2 = 128;
-	k3 = 1;
+	k1 = 2<<level;
+	k2 = 128>>level;
+	k3 = 1<<level;
+	//for( i1=0;i1<level;i1++ )
+	{
+		L1 = 0;
+		for( i2=0;i2<k2;i2++ )
+		{
+			for( i3=0;i3<k3;i3++ )
+			{
+				i = i3+L1;
+				j = i +k3;
+				ta = pin[2*i];
+				tb = pin[2*j];
+				pin[2*i] = (ta+tb)/2;
+				pin[2*j] = (ta-tb)/2;
+				ta = pin[2*i+1];
+				tb = pin[2*j+1];
+				pin[2*i+1] = (ta+tb)/2;
+				pin[2*j+1] = (ta-tb)/2;
+			}
+			L1 += k1;
+		}
+		//k1 *= 2;
+		//k2 /= 2;
+		//k3 *= 2;
+	}	
+}
+
+
+extern "C" void hadamard( short *in, int level, int off )
+{
+	short *pin = in + off*2;
+	int k1,k2,k3;
+	int i1,i2,i3;
+	int L1,i,j;
+	int ta,tb;
+	k1 = 256;
+	k2 = 1;
+	k3 = 128;
 	for( i1=0;i1<level;i1++ )
 	{
 		L1 = 0;
@@ -487,17 +523,17 @@ extern "C" void wash( short *in, short *out, int level, int off )
 				j = i +k3;
 				ta = pin[2*i];
 				tb = pin[2*j];
-				pin[2*i] = ta+tb;
-				pin[2*j] = ta-tb;
+				pin[2*i] = (ta+tb)/2;
+				pin[2*j] = (ta-tb)/2;
 				ta = pin[2*i+1];
 				tb = pin[2*j+1];
-				pin[2*i+1] = ta+tb;
-				pin[2*j+1] = ta-tb;
+				pin[2*i+1] = (ta+tb)/2;
+				pin[2*j+1] = (ta-tb)/2;
 			}
 			L1 += k1;
 		}
-		k1 *= 2;
-		k2 /= 2;
-		k3 *= 2;
+		k1 /= 2;
+		k2 *= 2;
+		k3 /= 2;
 	}	
-} 
+}
