@@ -225,6 +225,7 @@ extern "C" void xcorr2048Shift( void *ina, void *inb, int shift, int *out )
 #define BUFSIZE (512*256)
 #define TABSIZELOG2 (5)
 typedef struct ft_corr {
+	int amp;
 	int carrierf;
 	int timingf;
 	int carrierp;
@@ -294,7 +295,7 @@ extern "C" int interpolationFreqCorr( void *out, void *tab, int ol, int oo, ft_c
 	int cp,tp,t;
 	__m128i *po,*pt;
 	__m128i m128_t0,m128_t1,m128_t2,m128_t3,m128_t4,m128_t5,m128_t6,m128_t7,m128_t8,m128_t9,m128_t10,m128_t11,m128_t12;
-	__m128i sumi, sumq;
+	__m128i sumi, sumq, m128_amp;
 	int *twiddle = (int *)stwiddle_2048;
 	pt = (__m128i*)tab;
 	po = (__m128i*)out;
@@ -302,6 +303,8 @@ extern "C" int interpolationFreqCorr( void *out, void *tab, int ol, int oo, ft_c
 	pos = state->timingp >> 16;
 	pb = (int*)g_interpolationBuf;
 	//dumpTab( tab );
+	short amp = (short)state->amp;
+	m128_amp = _mm_set_epi16( amp, amp, amp, amp, amp, amp, amp, amp );
 	for( i=0;i<ol/4;i++ )
 	{
 		cp = (state->carrierp>>16)&0x7ff;
@@ -367,8 +370,9 @@ extern "C" int interpolationFreqCorr( void *out, void *tab, int ol, int oo, ft_c
 			m128_t8 = _mm_madd_epi16(  m128_t5, m128_t6 );
 			sumi = _mm_add_epi32( sumi, m128_t8 );
 
-	    sumi  = _mm_srli_si128 (sumi, 2); 
+			sumi  = _mm_srli_si128 (sumi, 2); 
     	m128_t0 = _mm_blend_epi16(sumq,sumi, 0x55);            //if(i<16) dump( m128_t0, "m128_t0");
+	    m128_t0 = _mm_mulhi_epi16( m128_t0, m128_amp );
 		}
 		t = twiddle[cp];
 		m128_t2 = _mm_set_epi32( t, t, t, t );
@@ -390,4 +394,110 @@ extern "C" int interpolationFreqCorr( void *out, void *tab, int ol, int oo, ft_c
 	return state->buf_end-pos;
 }
 	
-	   
+extern "C" void mulConst( void *in, void *pn, void *out, int len, int *coef )
+{
+	int i;
+	__m128i *pin, *ppn, *pout;
+	__m128i m128_t0,m128_t1,m128_t2,m128_t3,m128_t4,m128_t5,m128_t6,m128_t7,m128_t8,m128_t9,m128_t10,m128_t11,m128_t12;
+	__m128i coef_r, coef_i;
+	
+	pin = (__m128i *)in;
+	ppn = (__m128i *)pn;
+	pout = (__m128i *)out;
+	
+	coef_r = _mm_set_epi32( coef[0], coef[0], coef[0], coef[0] );
+	coef_i = _mm_set_epi32( coef[1], coef[1], coef[1], coef[1] );
+	
+	for( i=0;i<len/4;i++ )
+	{
+		m128_t0 = _mm_load_si128(pin); pin = pin + 1; 
+		m128_t2 = _mm_load_si128(ppn); ppn = ppn + 1; ;
+		
+		m128_t1 = _mm_shuffle_epi8(m128_t0, IQ_switch);
+    m128_t3 = _mm_sign_epi16  (m128_t2, Neg_I);
+
+    m128_t8 = _mm_madd_epi16  (m128_t0, m128_t2);  //real 
+    m128_t12  = _mm_madd_epi16(m128_t1, m128_t3);  //imag
+  
+    m128_t4 = _mm_mullo_epi32( m128_t8, coef_r );
+    m128_t5 = _mm_mullo_epi32( m128_t12, coef_i );
+    
+    m128_t4 = _mm_sub_epi32( m128_t4, m128_t5 ); // real
+    
+    m128_t6 = _mm_mullo_epi32( m128_t8, coef_i );
+    m128_t7 = _mm_mullo_epi32( m128_t12, coef_r );
+    
+    m128_t12 = _mm_add_epi32( m128_t6, m128_t7 ); //imag
+    
+    m128_t8  = _mm_srli_si128 (m128_t4, 2);
+    m128_t12 = _mm_blend_epi16(m128_t12,m128_t8, 0x55);
+
+		_mm_store_si128(pout, m128_t12);  pout = pout + 1;
+  }
+}
+
+/*
+def FHT(data):
+	lN = int(np.log2(len(data))+0.5)
+	N = 2**lN
+	print 'FHT:',lN,N
+	print '-------------------------------------------'
+	x = np.zeros(N)
+	x = data[:N]
+	k1=N
+	k2=1
+	k3=N/2
+	for i1 in range(lN):
+		L1 = 0
+		for i2 in range(k2):
+			for i3 in range(k3):
+				i = i3+L1
+				j = i+k3
+				temp1 = x[i]
+				temp2 = x[j]
+				x[i] = temp1 + temp2
+				x[j] = temp1 - temp2
+			L1 += k1
+		k1 /= 2
+		k2 *= 2
+		k3 /= 2
+	return x
+
+*/
+
+extern "C" void wash( short *in, short *out, int level, int off )
+{
+	short *pin = in + off*2;
+	short *pout = out + off*2;
+	int k1,k2,k3;
+	int i1,i2,i3;
+	int L1,i,j;
+	int ta,tb;
+	k1 = 2;
+	k2 = 128;
+	k3 = 1;
+	for( i1=0;i1<level;i1++ )
+	{
+		L1 = 0;
+		for( i2=0;i2<k2;i2++ )
+		{
+			for( i3=0;i3<k3;i3++ )
+			{
+				i = i3+L1;
+				j = i +k3;
+				ta = pin[2*i];
+				tb = pin[2*j];
+				pin[2*i] = ta+tb;
+				pin[2*j] = ta-tb;
+				ta = pin[2*i+1];
+				tb = pin[2*j+1];
+				pin[2*i+1] = ta+tb;
+				pin[2*j+1] = ta-tb;
+			}
+			L1 += k1;
+		}
+		k1 *= 2;
+		k2 /= 2;
+		k3 *= 2;
+	}	
+} 
