@@ -399,38 +399,39 @@ extern "C" void mulConst( void *in, void *pn, void *out, int len, int *coef )
 	int i;
 	__m128i *pin, *ppn, *pout;
 	__m128i m128_t0,m128_t1,m128_t2,m128_t3,m128_t4,m128_t5,m128_t6,m128_t7,m128_t8,m128_t9,m128_t10,m128_t11,m128_t12;
-	__m128i coef_r, coef_i;
-	
+	__m128i coef_r,coef_i,Is,Qs;
 	pin = (__m128i *)in;
 	ppn = (__m128i *)pn;
 	pout = (__m128i *)out;
 	
+	Is = _mm_set_epi16( 1, 0, 1, 0, 1, 0, 1, 0 );
+	Qs = _mm_set_epi16( 0, 1, 0, 1, 0, 1, 0, 1 );
+	                     
+	int dcoef = ((0-coef[1])<<16)&0xffff0000 | (coef[0]&0xffff);
+
 	coef_r = _mm_set_epi32( coef[0], coef[0], coef[0], coef[0] );
 	coef_i = _mm_set_epi32( coef[1], coef[1], coef[1], coef[1] );
 	
 	for( i=0;i<len/4;i++ )
 	{
-		m128_t0 = _mm_load_si128(pin); pin = pin + 1; 
-		m128_t2 = _mm_load_si128(ppn); ppn = ppn + 1; ;
+		m128_t0 = _mm_load_si128(pin); pin = pin + 1;
+		 
+		m128_t8 = _mm_madd_epi16   ( m128_t0, Is ); // real
+		m128_t12 = _mm_madd_epi16  ( m128_t0, Qs ); // imag
 		
-		m128_t1 = _mm_shuffle_epi8(m128_t0, IQ_switch);
-    m128_t3 = _mm_sign_epi16  (m128_t2, Neg_I);
+		m128_t4 = _mm_mullo_epi32  ( m128_t8, coef_r );
+		m128_t5 = _mm_mullo_epi32  ( m128_t12, coef_i );
+		m128_t4 = _mm_sub_epi32    ( m128_t4, m128_t5 ); // real
 
-    m128_t8 = _mm_madd_epi16  (m128_t0, m128_t2);  //real 
-    m128_t12  = _mm_madd_epi16(m128_t1, m128_t3);  //imag
-  
-    m128_t4 = _mm_mullo_epi32( m128_t8, coef_r );
-    m128_t5 = _mm_mullo_epi32( m128_t12, coef_i );
-    
-    m128_t4 = _mm_sub_epi32( m128_t4, m128_t5 ); // real
-    
-    m128_t6 = _mm_mullo_epi32( m128_t8, coef_i );
-    m128_t7 = _mm_mullo_epi32( m128_t12, coef_r );
-    
-    m128_t12 = _mm_add_epi32( m128_t6, m128_t7 ); //imag
-    
-    m128_t8  = _mm_srli_si128 (m128_t4, 2);
-    m128_t12 = _mm_blend_epi16(m128_t12,m128_t8, 0x55);
+		m128_t6 = _mm_mullo_epi32  ( m128_t8, coef_i );
+		m128_t7 = _mm_mullo_epi32  ( m128_t12, coef_r );
+		m128_t12 = _mm_add_epi32   ( m128_t6, m128_t7 ); //imag
+		
+		m128_t8  = _mm_srli_si128  (m128_t4, 2);
+		m128_t12 = _mm_blend_epi16 (m128_t12,m128_t8, 0x55);
+
+		m128_t2 = _mm_load_si128(ppn); ppn = ppn + 1;  
+		m128_t12 = _mm_mullo_epi16 ( m128_t12, m128_t2 );
 
 		_mm_store_si128(pout, m128_t12);  pout = pout + 1;
   }
