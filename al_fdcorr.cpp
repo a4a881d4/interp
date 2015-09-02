@@ -404,8 +404,8 @@ extern "C" void mulConst( void *in, void *pn, void *out, int len, int *coef )
 	ppn = (__m128i *)pn;
 	pout = (__m128i *)out;
 	
-	Is = _mm_set_epi16( 1, 0, 1, 0, 1, 0, 1, 0 );
-	Qs = _mm_set_epi16( 0, 1, 0, 1, 0, 1, 0, 1 );
+	Is = _mm_set_epi32( 1, 1, 1, 1 );
+	Qs = _mm_set_epi32( 0x10000, 0x10000, 0x10000, 0x10000 );
 	                     
 	int dcoef = ((0-coef[1])<<16)&0xffff0000 | (coef[0]&0xffff);
 
