@@ -233,6 +233,8 @@ typedef struct ft_corr {
 	int buf_end;
 } ft_corr_t;
 __m128i g_interpolationBuf[BUFSIZE/4];
+__m128i g_matchFilterBuf[BUFSIZE/4];
+#define MF_HEAD 16
 
 extern "C" int interpolationPutBuf( void *in, int il, ft_corr_t *state )
 {
@@ -538,3 +540,5 @@ extern "C" void hadamard( short *in, int level, int off )
 		k3 /= 2;
 	}	
 }
+
+
